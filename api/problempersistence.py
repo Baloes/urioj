@@ -1,7 +1,5 @@
 import csv
 
-import problemscraper
-
 
 class ProblemPersistence:
 
@@ -9,8 +7,17 @@ class ProblemPersistence:
         pass
 
     @staticmethod
-    def load(self):
-        pass
+    def load():
+        with open('urioj_problems.csv', 'r+') as csvfile:
+            reader = csv.reader(csvfile)
+            labels = next(reader)
+            problem = {}
+            for row in reader:
+                _id = row[0]
+                problem[_id] = {}
+                for label, value in zip(labels[1:], row[1:]):
+                    problem[_id][label] = value
+            return problem
 
     @staticmethod
     def save(data):
@@ -25,10 +32,11 @@ class ProblemPersistence:
 
 
 def main():
-    scraper = problemscraper.ProblemScraper()
-    problems = scraper.scap()
-    ProblemPersistence.save(problems)
-
+    # scraper = problemscraper.ProblemScraper()
+    # problems = scraper.scap()
+    # ProblemPersistence.save(problems)
+    for problem in ProblemPersistence.load():
+        print(problem)
 
 if __name__ == '__main__':
     main()

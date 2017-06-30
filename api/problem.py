@@ -1,38 +1,132 @@
-#########################################################################
-# problem.py é um espelho dos problemas disponíveis do uri, com apenas um
-# subconjunto das informações.
-#
-# Fazer primeiro o problem.py, porque os outros tem dependencia dele
-#
-#########################################################################
+import copy
 
-# Interface
-class Problems():
-
-    def __init__(self): # Primeiro passo: Verificar se existe uma base de dados com os problemas
-        pass            # Segundo passo: Caso sim, carrega os dados na memória, caso contrário
-                        #                verifica se o usuáro quer baixar pela primeira vez a
-                        #                base de dados.
-
-    def update(self, flag=None): # ideia da flag é se quer fazer uma soft-update (só verifica se possui)
-        pass                     # problemas novos, ou hard-update, se deseja verificar toda a base de
-                                 # dados
-
-    def get(self, id=None, name=None): # Retorna um Problem
-        pass
+import problemconstructor
 
 
-# get by id
-# get by name
-# get by category
-# get by most solved
-# get by level
-# allow expression like Problems.level < X and problems.category == 'Grafos'
-# or Problems.solved[-5] and Problems.category.grafos
+class Name:
+
+    def __init__(self, problem):
+        self.problem = problem
+
+    def __contains__(self, name):
+        problem = {}
+        for _id, info in self.problem.items():
+            if name in info['name']:
+                problem[_id] = copy.deepcopy(self.problem[_id])
+        return Problems(problem=problem)
 
 
-# Problems.id -> return a list of ID's
-# Problems.name -> return a list of names
-# Problems.categoty -> return a list of categories
-# Problems.level -> return a list of levels
-#
+class Category:
+
+    def __init__(self, problem):
+        self.problem = problem
+
+    def __eq__(self, category):
+        problem = {}
+        for _id, info in self.problem.items():
+            if category == info['category']:
+                problem[_id] = copy.deepcopy(self.problem[_id])
+        return Problems(problem=problem)
+
+
+class Solved:
+
+    def __init__(self, problem):
+        self.problem = problem
+
+    def _return(self, cmp):
+        problem = {}
+        for _id, info in self.problem.items():
+            if cmp(int(info['solved'])):
+                problem[_id] = copy.deepcopy(self.problem[_id])
+        return Problems(problem=problem)
+
+    def __eq__(self, value):
+        return self._return(lambda solved: solved == value)
+
+    def __lt__(self, value):
+        return self._return(lambda solved: solved < value)
+
+    def __gt__(self, value):
+        return self._return(lambda solved: solved > value)
+
+
+class Level:
+
+    def __init__(self, problem):
+        self.problem = problem
+
+    def _return(self, cmp):
+        problem = {}
+        for _id, info in self.problem.items():
+            if cmp(int(info['level'])):
+                problem[_id] = copy.deepcopy(self.problem[_id])
+        return Problems(problem=problem)
+
+    def __eq__(self, value):
+        return self._return(lambda level: level == value)
+
+    def __lt__(self, value):
+        return self._return(lambda level: level < value)
+
+    def __gt__(self, value):
+        return self._return(lambda level: level > value)
+
+
+class Problems:
+
+    def __init__(self, problem=None):
+        if not problem:
+            constructor = problemconstructor.ProblemConstructor()
+            self.problem = constructor.construct()
+        else:
+            self.problem = problem
+        self.name = Name(self.problem)
+        self.category = Category(self.problem)
+        self.level = Level(self.problem)
+
+    def __len__(self):
+        return len(self.problem)
+
+    def __repr__(self):
+        string = '{:<5} {:<40} {:<10} {:<7} {:<7} {:<5} {:<5} {:<5} {:<5} {:<5} {:<5} {:<5}\n'\
+            .format(
+            'id', 'name', 'category', 'solved', 'level',
+            'ac', 'ce', 'rte', 'tle', 'pe', 'wa', 'pre'
+        )
+        for key, value in self.problem.items():
+            string += '{}  {name:<40} {category:<10} {solved:<7} {level:<7} ' \
+                      '{ac:<5} {ce:<5} {rte:<5} {tle:<5} {pe:<5} {wa:<5} {pre:<5}\n'\
+                .format(key, **value)
+        return string
+
+    def __and__(self, other):
+        problem = {}
+        for _id in self.problem.keys():
+            if _id in other.problem:
+                problem[_id] = copy.deepcopy(self.problem[_id])
+        for _id in other.problem.keys():
+            if _id in self.problem:
+                problem[_id] = copy.deepcopy(other.problem[_id])
+        return Problems(problem=problem)
+
+    def __or__(self, other):
+        problem = {}
+        problem.update(copy.deepcopy(self.problem))
+        problem.update(copy.deepcopy(other.problem))
+        return Problems(problem=problem)
+
+    def __sub__(self, other):
+        problem = {}
+        for _id in self.problem.keys():
+            if _id not in other.problem:
+                problem[_id] = copy.deepcopy(self.problem[_id])
+        return Problems(problem=problem)
+
+
+def main():
+    base = Problems()
+    print((base.category == 'Grafos').level > 6)
+
+if __name__ == '__main__':
+    main()
