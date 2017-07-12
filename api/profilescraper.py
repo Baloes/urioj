@@ -1,20 +1,40 @@
 from urllib.request import urlopen
 import re
+import threading
 
 from bs4 import BeautifulSoup
 
-# import profile
+import profile
 
 
-def get_n_pages(soup):
-    content = soup.div.find(id='table-info').contents[0]  # i.e "1 of 32"
-    return [int(i) for i in content.split() if i.isdigit()][-1]
+def _start_thread(n, target, args=None, args_list=None): # TODO: Jogar isso parar um modulo utilitario
+    threads = []
+    for i in range(n):
+        if args_list:
+            thread = threading.Thread(target=target, args=(args_list[i],))
+        else:
+            thread = threading.Thread(target=target, args=(args,))
+        thread.start()
+        threads.append(thread)
+    return threads
 
-def get_problems_solved_pages(url, soup):
-    n_pages = get_n_pages(soup)
-    for page in range(1, n_pages + 1):
-        page_soup = BeautifulSoup(urlopen(url + '?page=' + str(page)), 'html.parser')
-        yield page_soup
+
+def _join_threads(threads):
+    for thread in threads:
+        thread.join()
+
+
+def _get_html(url):
+    while True:
+        try:
+            html = BeautifulSoup(urlopen(url), 'html.parser')
+        except:
+            continue
+        return html
+
+
+def _remove_extra_spaces(text):
+    return re.sub(' +', ' ', text).strip()
 
 
 class ProfileScraper:
@@ -23,7 +43,17 @@ class ProfileScraper:
 
     def __init__(self, id):
         self.id = id
-        self.soup = BeautifulSoup(urlopen(self._url_prefix + id), 'html.parser')
+        self.soup = _get_html(self._url_prefix + id)
+        self.problems = []
+
+    def _get_n_pages(self):
+        content = self.soup.div.find(id='table-info').contents[0]  # i.e "1 of 32"
+        return [int(i) for i in content.split() if i.isdigit()][-1]
+
+    def _get_problems_solved_pages(self, url):
+        n_pages = self._get_n_pages()
+        for page in range(1, n_pages + 1):
+            yield url + '?page=' + str(page)
 
     def _get_profile_info(self):
         keys = ['id', 'name', 'place', 'country', 'university', 'since', 'solved', 'tried', 'submission']
@@ -34,35 +64,57 @@ class ProfileScraper:
             values.append(value)
         return {key: value for key, value in zip(keys, values)}
 
-    def _get_problems_solved(self, soup):
+    def _get_problems_solved(self, url):
+        soup = _get_html(url)
         tbody = soup.find('tbody')
         problem_id = tbody.find_all(class_='id')
-        problem_name = tbody.find_all(class_='wide')
         problem_time = tbody.find_all(class_='small')[3::4]
         problem_date = tbody.find_all(class_='center')
-        for id, name, time, date in zip(problem_id, problem_name, problem_time, problem_date):
-            print('---------')
-            print(re.sub('\n|\t', '', id.get_text()))
-            print(re.sub('\n|\t', '', name.get_text()))
-            print(re.sub('\n|\t', '', time.get_text()))
-            print(re.sub('\n|\t', '', date.get_text()))
+        problems = []
+        for id, time, date in zip(problem_id, problem_time, problem_date):
+            _id = re.sub('\n|\t', '', id.get_text())
+            _id = _remove_extra_spaces(_id)
+            time = re.sub('\n|\t', '', time.get_text())
+            date = re.sub('\n|\t', '', date.get_text())
+            problems.append((_id, time, date))
+        self.problems += problems # TODO: caso nao seja o CPython pode ter problema de sincronizacao
 
     def get_data(self):
-        for page_soup in get_problems_solved_pages(self._url_prefix + self.id, self.soup):
-            self._get_problems_solved(page_soup)
-        # return profile.Profile(**self._get_profile_info())
+        profile_info = self._get_profile_info()
+        threads = []
+        for page_html in self._get_problems_solved_pages(self._url_prefix + self.id):
+            threads += _start_thread(1, self._get_problems_solved, args=page_html)
+        _join_threads(threads)
+        profile_info['problems_solved'] = self.problems
+        return profile.Profile(**profile_info)
 
 
 def main():
     scraper = ProfileScraper('36720')
     profile = scraper.get_data()
     print(profile)
+    print(profile.problem)
 
-main()
+
+if __name__ == '__main__':
+    main()
 
 '''
 Modulos publicos da API:
 -Profile
 -Problems = Coleção de Problemas
 -University = Coleção de Alunos
+
+
+Profile.id
+Profile.name
+Profile.place
+Profile.country
+Profile.university
+Profiel.since
+Profile.solved
+Profile.tried
+Profile.submission
+Profile.problem
 '''
+

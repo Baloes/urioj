@@ -124,7 +124,7 @@ class ProblemScraper:
         )
         _join_threads(threads)
 
-    def scap(self):
+    def scrap(self):
         self._travel_problem_list()
         self._get_problem_info()
         sorted_problems = sorted(self.problem_info.items(), key=lambda x: x[0])
@@ -137,7 +137,7 @@ class ProblemScraper:
 def main():
     t0 = time.time()
     scraper = ProblemScraper()
-    problem_info = scraper.scap()
+    problem_info = scraper.scrap()
     for problem in problem_info:
         print(problem)
     print(time.time() - t0)

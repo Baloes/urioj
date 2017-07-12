@@ -255,12 +255,17 @@ class Problems:
 
     def __and__(self, other):
         problem = {}
-        for _id in self.problem.keys():
-            if _id in other.problem:
-                problem[_id] = copy.deepcopy(self.problem[_id])
-        for _id in other.problem.keys():
-            if _id in self.problem:
-                problem[_id] = copy.deepcopy(other.problem[_id])
+        if isinstance(other, dict):
+            for _id in self.problem.keys():
+                if _id in other.problem:
+                    problem[_id] = copy.deepcopy(self.problem[_id])
+            for _id in other.problem.keys():
+                if _id in self.problem:
+                    problem[_id] = copy.deepcopy(other.problem[_id])
+        elif isinstance(other, list): # TODO: Decidir se isso realmente deveria exitir
+            for _id in other:
+                if _id in self.problem:
+                    problem[_id] = copy.deepcopy(self.problem[_id])
         return Problems(problem=problem)
 
     def __or__(self, other):
