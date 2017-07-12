@@ -7,7 +7,7 @@ import problempersistence
 class ProblemConstructor:
 
     def _in_database(self):
-        return os.path.exists(os.getcwd() + '/urioj_problems.csv')
+        return os.path.exists(os.getcwd() + '/database/urioj_problems.csv')
 
     def construct(self):
         if self._in_database():
